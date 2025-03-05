@@ -7,8 +7,8 @@ on:
   schedule:
     - cron: "0 4 * * *"
   
-  workflow-dispatch:
-  
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
