@@ -46,7 +46,7 @@ a {fill: #ffa657; text-decoration: underline;}
 <text x="430" y="30" fill="#c9d1d9">
 <tspan x="450" y="30">jarno@hendriksen</tspan> -———————————————————————————————————————-—-
 <tspan x="450" y="50" class="cc">. </tspan><tspan class="key">OS</tspan>:<tspan class="cc"> ................... </tspan><tspan class="value">Windows 11, Android 14, Linux Mint</tspan>
-<tspan x="450" y="70" class="cc">. </tspan><tspan class="key">Uptime</tspan>:<tspan class="cc" id="age_data_dots"> ...................... </tspan><tspan class="value" id="age_data">23 years, 9 months, 16 days</tspan>
+<tspan x="450" y="70" class="cc">. </tspan><tspan class="key">Uptime</tspan>:<tspan class="cc" id="age_data_dots"> ...................... </tspan><tspan class="value" id="age_data">23 years, 9 months, 17 days</tspan>
 <tspan x="450" y="90" class="cc">. </tspan><tspan class="key">Host</tspan>:<tspan class="cc"> ................................. </tspan><tspan class="value">Utrecht University</tspan>
 <tspan x="450" y="110" class="cc">. </tspan><tspan class="key">Kernel</tspan>:<tspan class="cc"> ........................ </tspan><tspan class="value">Game and Media Technology</tspan>
 <tspan x="450" y="130" class="cc">. </tspan><tspan class="key">IDE</tspan>:<tspan class="cc"> ................................ </tspan><tspan class="value">VSCode 1.96.0, CLion</tspan>
