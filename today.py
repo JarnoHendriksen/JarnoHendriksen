@@ -221,7 +221,7 @@ def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
     If it has, run recursive_loc on that repository to update the LOC count
     """
     cached = True # Assume all repositories are cached
-    filename = 'cache/'+hashlib.sha256(USER_NAME.encode('utf-8')).hexdigest()+'.txt' # Create a unique filename for each user
+    filename = './cache/'+hashlib.sha256(USER_NAME.encode('utf-8')).hexdigest()+'.txt' # Create a unique filename for each user
     try:
         with open(filename, 'r') as f:
             data = f.readlines()
@@ -316,21 +316,21 @@ def stars_counter(data):
     return total_stars
 
 
-def svg_overwrite(filename, age_data, star_data, repo_data, contrib_data, follower_data):
+def svg_overwrite(filename, age_data, star_data, loc_data, commit_data, repo_data, contrib_data, follower_data):
     """
     Parse SVG files and update elements with my age, commits, stars, repositories, and lines written
     """
     tree = etree.parse(filename)
     root = tree.getroot()
-    #justify_format(root, 'commit_data', commit_data, 22)
+    justify_format(root, 'commit_data', commit_data, 22)
     justify_format(root, 'age_data', age_data, 49)
     justify_format(root, 'star_data', star_data, 14)
     justify_format(root, 'repo_data', repo_data, 6)
     justify_format(root, 'contrib_data', contrib_data)
     justify_format(root, 'follower_data', follower_data, 10)
-    # justify_format(root, 'loc_data', loc_data[2], 9)
-    # justify_format(root, 'loc_add', loc_data[0])
-    # justify_format(root, 'loc_del', loc_data[1], 7)
+    justify_format(root, 'loc_data', loc_data[2], 9)
+    justify_format(root, 'loc_add', loc_data[0])
+    justify_format(root, 'loc_del', loc_data[1], 7)
     tree.write(filename, encoding='utf-8', xml_declaration=True)
 
 
@@ -450,29 +450,29 @@ if __name__ == '__main__':
     formatter('account data', user_time)
     age_data, age_time = perf_counter(daily_readme, datetime.datetime(2001, 5, 17))
     formatter('age calculation', age_time)
-    #total_loc, loc_time = perf_counter(loc_query, ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'], 7)
-    #formatter('LOC (cached)', loc_time) if total_loc[-1] else formatter('LOC (no cache)', loc_time)
-    #commit_data, commit_time = perf_counter(commit_counter, 7)
+    total_loc, loc_time = perf_counter(loc_query, ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'], 7)
+    formatter('LOC (cached)', loc_time) if total_loc[-1] else formatter('LOC (no cache)', loc_time)
+    commit_data, commit_time = perf_counter(commit_counter, 7)
     star_data, star_time = perf_counter(graph_repos_stars, 'stars', ['OWNER'])
     repo_data, repo_time = perf_counter(graph_repos_stars, 'repos', ['OWNER'])
     contrib_data, contrib_time = perf_counter(graph_repos_stars, 'repos', ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
     follower_data, follower_time = perf_counter(follower_getter, USER_NAME)
 
     # several repositories that I've contributed to have since been deleted.
-    # if OWNER_ID == {'id': 'MDQ6VXNlcjU3OTg1NDIx'}:  # only calculate for user JarnoHendriksen
-    #     archived_data = add_archive()
-    #     for index in range(len(total_loc)-1):
-    #         total_loc[index] += archived_data[index]
-    #     contrib_data += archived_data[-1]
-    #     commit_data += int(archived_data[-2])
+    if OWNER_ID == {'id': 'MDQ6VXNlcjU3OTg1NDIx'}:  # only calculate for user JarnoHendriksen
+        archived_data = add_archive()
+        for index in range(len(total_loc)-1):
+            total_loc[index] += archived_data[index]
+        contrib_data += archived_data[-1]
+        commit_data += int(archived_data[-2])
 
-    #for index in range(len(total_loc)-1): total_loc[index] = '{:,}'.format(total_loc[index]) # format added, deleted, and total LOC
+    for index in range(len(total_loc)-1): total_loc[index] = '{:,}'.format(total_loc[index]) # format added, deleted, and total LOC
 
-    svg_overwrite('profile.svg', age_data, star_data, repo_data, contrib_data, follower_data)
+    svg_overwrite('profile.svg', age_data, star_data, total_loc[:-1], commit_data, repo_data, contrib_data, follower_data)
 
     # move cursor to override 'Calculation times:' with 'Total function time:' and the total function time, then move cursor back
     print('\033[F\033[F\033[F\033[F\033[F\033[F\033[F\033[F',
-        '{:<21}'.format('Total function time:'), '{:>11}'.format('%.4f' % (user_time + age_time + star_time + repo_time + contrib_time)),
+        '{:<21}'.format('Total function time:'), '{:>11}'.format('%.4f' % (user_time + age_time + loc_time + commit_time + star_time + repo_time + contrib_time)),
         ' s \033[E\033[E\033[E\033[E\033[E\033[E\033[E\033[E', sep='')
 
     print('Total GitHub GraphQL API calls:', '{:>3}'.format(sum(QUERY_COUNT.values())))
