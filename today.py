@@ -12,7 +12,7 @@ import hashlib
 # Issues and pull requests permissions not needed at the moment, but may be used in the future
 HEADERS = {'authorization': 'token '+ os.environ['ACCESS_TOKEN']}
 USER_NAME = os.environ['USER_NAME']
-QUERY_COUNT = {'user_getter': 0, 'follower_getter': 0, 'graph_repos_stars': 0, 'recursive_loc': 0, 'graph_commits': 0, 'loc_query': 0}
+QUERY_COUNT = {'user_getter': 0, 'follower_getter': 0, 'graph_repos_stars': 0, 'recursive_loc': 0, 'graph_commits': 0, 'loc_query': 0, 'langs': 0}
 
 
 def daily_readme(birthday):
@@ -319,7 +319,69 @@ def stars_counter(data):
     return total_stars
 
 
-def svg_overwrite(filename, age_data, star_data, loc_data, commit_data, repo_data, contrib_data, follower_data):
+def lang_query(owner_affiliation, cursor=None, edges=[]):
+    """
+    Get the languages used in each repository
+    """
+
+    query_count('langs')
+    query = '''
+    query ($owner_affiliation: [RepositoryAffiliation], $login: String!, $cursor: String) {
+        user(login: $login) {
+            repositories(first: 60, after: $cursor, ownerAffiliations: $owner_affiliation) {
+                edges {
+                    node {
+                        ... on Repository {
+                            languages(first: 100) {
+                                totalSize
+                                edges {
+                                    size
+                                    node {
+                                        name
+                                        id
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                pageInfo {
+                        endCursor
+                        hasNextPage
+                }
+            }
+        }
+    }
+    '''
+    variables = {'owner_affiliation': owner_affiliation, 'login': USER_NAME, 'cursor': cursor}
+    request = simple_request(lang_query.__name__, query, variables)
+
+    rj = request.json()
+    # If repository data has another page
+    if rj['data']['user']['repositories']['pageInfo']['hasNextPage']:
+        # Add on to the LoC count
+        edges += rj['data']['user']['repositories']['edges']
+        return lang_query(owner_affiliation, request.json()['data']['user']['repositories']['pageInfo']['endCursor'], edges)
+    else:
+        return count_langs(edges + request.json()['data']['user']['repositories']['edges'])
+
+
+def count_langs(edges):
+    totalSize = 0
+    langs = {} # Dictionary {'lang_name': size}
+
+    for node in edges:
+        totalSize += node['node']['languages']['totalSize'] # Add size of repo to total size
+        languages = node['node']['languages']['edges']
+        for lang in languages:
+            if not lang['node']['name'] in langs:
+                langs[lang['node']['name']] = lang['size']
+            else:
+                langs[lang['node']['name']] += lang['size']
+    
+    return (totalSize, langs)
+
+def svg_overwrite(filename, age_data, star_data, loc_data, commit_data, repo_data, contrib_data, follower_data, top_langs):
     """
     Parse SVG files and update elements with my age, commits, stars, repositories, and lines written
     """
@@ -334,6 +396,16 @@ def svg_overwrite(filename, age_data, star_data, loc_data, commit_data, repo_dat
     justify_format(root, 'loc_data', loc_data[2], 13)
     justify_format(root, 'loc_add', loc_data[0])
     justify_format(root, 'loc_del', loc_data[1], 7)
+
+    langs = ""
+    for i in range(len(top_langs)):
+        (lang_name, percentage) = top_langs[i]
+        langs += lang_name + "(" + str(percentage) + "%)"
+        if i < len(top_langs) - 1:
+            langs += ", "
+
+    justify_format(root, 'language_data', langs, 42)
+
     tree.write(filename, encoding='utf-8', xml_declaration=True)
 
 
@@ -460,6 +532,18 @@ if __name__ == '__main__':
     repo_data, repo_time = perf_counter(graph_repos_stars, 'repos', ['OWNER'])
     contrib_data, contrib_time = perf_counter(graph_repos_stars, 'repos', ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
     follower_data, follower_time = perf_counter(follower_getter, USER_NAME)
+    lang_data, lang_time = perf_counter(lang_query, ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
+
+    (total_size, languages) = lang_data
+
+    lang_list = []
+    for lang in languages:
+        print(lang)
+        lang_list.append((lang, languages[lang]))
+
+    lang_list.sort(key=lambda x: x[1], reverse=True)
+
+    top_langs = [(name, round((size / total_size) * 100)) for (name, size) in lang_list[:4] ]
 
     # several repositories that I've contributed to have since been deleted.
     # if OWNER_ID == {'id': 'MDQ6VXNlcjU3OTg1NDIx'}:  # only calculate for user JarnoHendriksen
@@ -471,11 +555,11 @@ if __name__ == '__main__':
 
     for index in range(len(total_loc)-1): total_loc[index] = '{:,}'.format(total_loc[index]) # format added, deleted, and total LOC
 
-    svg_overwrite('profile.svg', age_data, star_data, total_loc[:-1], commit_data, repo_data, contrib_data, follower_data)
+    svg_overwrite('profile.svg', age_data, star_data, total_loc[:-1], commit_data, repo_data, contrib_data, follower_data, top_langs)
 
     # move cursor to override 'Calculation times:' with 'Total function time:' and the total function time, then move cursor back
     print('\033[F\033[F\033[F\033[F\033[F\033[F\033[F\033[F',
-        '{:<21}'.format('Total function time:'), '{:>11}'.format('%.4f' % (user_time + age_time + loc_time + commit_time + star_time + repo_time + contrib_time)),
+        '{:<21}'.format('Total function time:'), '{:>11}'.format('%.4f' % (user_time + age_time + loc_time + commit_time + star_time + repo_time + contrib_time + lang_time)),
         ' s \033[E\033[E\033[E\033[E\033[E\033[E\033[E\033[E', sep='')
 
     print('Total GitHub GraphQL API calls:', '{:>3}'.format(sum(QUERY_COUNT.values())))
