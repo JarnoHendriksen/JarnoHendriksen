@@ -381,7 +381,7 @@ def count_langs(edges):
     
     return (totalSize, langs)
 
-def svg_overwrite(filename, age_data, star_data, loc_data, commit_data, repo_data, contrib_data, follower_data, top_langs):
+def svg_overwrite(filename, age_data, star_data, commit_data, repo_data, contrib_data, follower_data, top_langs):
     """
     Parse SVG files and update elements with my age, commits, stars, repositories, and lines written
     """
@@ -393,9 +393,9 @@ def svg_overwrite(filename, age_data, star_data, loc_data, commit_data, repo_dat
     justify_format(root, 'repo_data', repo_data, 7)
     justify_format(root, 'contrib_data', contrib_data)
     justify_format(root, 'follower_data', follower_data, 10)
-    justify_format(root, 'loc_data', loc_data[2], 13)
-    justify_format(root, 'loc_add', loc_data[0])
-    justify_format(root, 'loc_del', loc_data[1], 7)
+    #justify_format(root, 'loc_data', loc_data[2], 13)
+    #justify_format(root, 'loc_add', loc_data[0])
+    #justify_format(root, 'loc_del', loc_data[1], 7)
 
     langs = ""
     for i in range(len(top_langs)):
@@ -525,8 +525,8 @@ if __name__ == '__main__':
     formatter('account data', user_time)
     age_data, age_time = perf_counter(daily_readme, datetime.datetime(2001, 5, 17))
     formatter('age calculation', age_time)
-    total_loc, loc_time = perf_counter(loc_query, ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'], 7)
-    formatter('LOC (cached)', loc_time) if total_loc[-1] else formatter('LOC (no cache)', loc_time)
+    # total_loc, loc_time = perf_counter(loc_query, ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'], 7)
+    # formatter('LOC (cached)', loc_time) if total_loc[-1] else formatter('LOC (no cache)', loc_time)
     commit_data, commit_time = perf_counter(commit_counter, 7)
     star_data, star_time = perf_counter(graph_repos_stars, 'stars', ['OWNER'])
     repo_data, repo_time = perf_counter(graph_repos_stars, 'repos', ['OWNER'])
@@ -553,13 +553,13 @@ if __name__ == '__main__':
     #     contrib_data += archived_data[-1]
     #     commit_data += int(archived_data[-2])
 
-    for index in range(len(total_loc)-1): total_loc[index] = '{:,}'.format(total_loc[index]) # format added, deleted, and total LOC
+    # for index in range(len(total_loc)-1): total_loc[index] = '{:,}'.format(total_loc[index]) # format added, deleted, and total LOC
 
-    svg_overwrite('profile.svg', age_data, star_data, total_loc[:-1], commit_data, repo_data, contrib_data, follower_data, top_langs)
+    svg_overwrite('profile.svg', age_data, star_data, commit_data, repo_data, contrib_data, follower_data, top_langs)
 
     # move cursor to override 'Calculation times:' with 'Total function time:' and the total function time, then move cursor back
     print('\033[F\033[F\033[F\033[F\033[F\033[F\033[F\033[F',
-        '{:<21}'.format('Total function time:'), '{:>11}'.format('%.4f' % (user_time + age_time + loc_time + commit_time + star_time + repo_time + contrib_time + lang_time)),
+        '{:<21}'.format('Total function time:'), '{:>11}'.format('%.4f' % (user_time + age_time + commit_time + star_time + repo_time + contrib_time + lang_time)),
         ' s \033[E\033[E\033[E\033[E\033[E\033[E\033[E\033[E', sep='')
 
     print('Total GitHub GraphQL API calls:', '{:>3}'.format(sum(QUERY_COUNT.values())))
